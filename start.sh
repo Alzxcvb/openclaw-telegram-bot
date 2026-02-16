@@ -1,18 +1,19 @@
 #!/bin/bash
-MODEL="${OPENCLAW_MODEL:-google/gemma-3n-e2b-it:free}"
+# Start model rewrite proxy in background
+node /tmp/proxy.mjs &
+sleep 1
+
+# Point OpenRouter requests to our local proxy
+export OPENROUTER_BASE_URL="http://127.0.0.1:3456/api/v1"
+export OVERRIDE_MODEL="${OPENCLAW_MODEL:-google/gemma-3n-e2b-it:free}"
 
 mkdir -p "$HOME/.openclaw"
-
-# Try both config formats - the GitHub README uses "agent.model" (singular)
-cat > "$HOME/.openclaw/openclaw.json" << CONF
+cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
 {
-  "agent": {
-    "model": "$MODEL"
-  },
   "agents": {
     "defaults": {
       "model": {
-        "primary": "$MODEL"
+        "primary": "openrouter/meta-llama/llama-4-maverick"
       }
     }
   },
