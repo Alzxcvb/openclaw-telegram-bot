@@ -1,7 +1,7 @@
 #!/bin/bash
-mkdir -p /root/.openclaw
+mkdir -p "$HOME/.openclaw"
 
-cat > /root/.openclaw/openclaw.json << 'CONF'
+cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
 {
   "agents": {
     "defaults": {
