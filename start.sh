@@ -1,5 +1,6 @@
 #!/bin/bash
 mkdir -p "$HOME/.openclaw"
+mkdir -p /tmp/openclaw-state
 
 cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
 {
@@ -24,4 +25,4 @@ cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
 }
 CONF
 
-exec node openclaw.mjs gateway --allow-unconfigured --bind lan
+exec node openclaw.mjs gateway --allow-unconfigured --bind lan --model "deepseek/deepseek-r1-0528:free"
