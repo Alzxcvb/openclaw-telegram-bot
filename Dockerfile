@@ -2,8 +2,7 @@ FROM ghcr.io/openclaw/openclaw:latest
 
 ENV NODE_ENV=production
 
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+COPY --chmod=755 start.sh /tmp/start.sh
 
-ENTRYPOINT ["/bin/bash", "/start.sh"]
+ENTRYPOINT ["/bin/bash", "/tmp/start.sh"]
 CMD []
