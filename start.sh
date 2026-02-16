@@ -1,6 +1,9 @@
 #!/bin/bash
+# Clear any cached config from the state dir so our config takes effect
+rm -rf /tmp/openclaw-state/agents /tmp/openclaw-state/*.json 2>/dev/null
+rm -f "$HOME/.openclaw/openclaw.json" "$HOME/.openclaw/openclaw.json.bak" 2>/dev/null
+
 mkdir -p "$HOME/.openclaw"
-mkdir -p /tmp/openclaw-state
 
 cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
 {
