@@ -1,31 +1,20 @@
 #!/bin/bash
-# Clear any cached config from the state dir so our config takes effect
-rm -rf /tmp/openclaw-state/agents /tmp/openclaw-state/*.json 2>/dev/null
-rm -f "$HOME/.openclaw/openclaw.json" "$HOME/.openclaw/openclaw.json.bak" 2>/dev/null
+MODEL="${OPENCLAW_MODEL:-google/gemma-3n-e2b-it:free}"
+CONFIG="{\"agents\":{\"defaults\":{\"model\":{\"primary\":\"$MODEL\"}}},\"channels\":{\"telegram\":{\"enabled\":true,\"dmPolicy\":\"open\",\"allowFrom\":[\"*\"],\"streamMode\":\"partial\"}},\"gateway\":{\"bind\":\"lan\"}}"
 
+# Write config to every possible location
 mkdir -p "$HOME/.openclaw"
+mkdir -p /tmp/openclaw-state
+mkdir -p /home/node/.openclaw 2>/dev/null
 
-cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
-{
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "deepseek/deepseek-r1-0528:free"
-      }
-    }
-  },
-  "channels": {
-    "telegram": {
-      "enabled": true,
-      "dmPolicy": "open",
-      "allowFrom": ["*"],
-      "streamMode": "partial"
-    }
-  },
-  "gateway": {
-    "bind": "lan"
-  }
-}
-CONF
+echo "$CONFIG" > "$HOME/.openclaw/openclaw.json"
+echo "$CONFIG" > /tmp/openclaw-state/openclaw.json 2>/dev/null
+echo "$CONFIG" > /home/node/.openclaw/openclaw.json 2>/dev/null
 
-exec node openclaw.mjs gateway --allow-unconfigured --bind lan --model "deepseek/deepseek-r1-0528:free"
+# Also remove any backup that might be restored
+rm -f "$HOME/.openclaw/openclaw.json.bak" 2>/dev/null
+rm -f /home/node/.openclaw/openclaw.json.bak 2>/dev/null
+
+export OPENCLAW_DEFAULT_MODEL="$MODEL"
+
+exec node openclaw.mjs gateway --allow-unconfigured --bind lan
