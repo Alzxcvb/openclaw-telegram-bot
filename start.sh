@@ -6,7 +6,7 @@ cat > /root/.openclaw/openclaw.json << 'CONF'
   "agents": {
     "defaults": {
       "model": {
-        "primary": "anthropic/claude-sonnet-4-5-20250929"
+        "primary": "openrouter/meta-llama/llama-4-maverick"
       }
     }
   },
