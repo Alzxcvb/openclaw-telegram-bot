@@ -4,6 +4,6 @@ ENV NODE_ENV=production
 
 ARG CACHEBUST=1
 RUN mkdir -p $HOME/.openclaw && \
-    echo '{"agents":{"defaults":{"model":{"primary":"openrouter/meta-llama/llama-4-maverick"}}},"channels":{"telegram":{"enabled":true,"dmPolicy":"open","allowFrom":["*"],"streamMode":"partial"}},"gateway":{"bind":"lan"}}' > $HOME/.openclaw/openclaw.json
+    echo '{"agents":{"defaults":{"model":{"primary":"deepseek/deepseek-r1-0528:free"}}},"channels":{"telegram":{"enabled":true,"dmPolicy":"open","allowFrom":["*"],"streamMode":"partial"}},"gateway":{"bind":"lan"}}' > $HOME/.openclaw/openclaw.json
 
 CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured", "--bind", "lan"]

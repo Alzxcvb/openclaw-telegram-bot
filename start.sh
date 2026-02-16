@@ -6,7 +6,7 @@ cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
   "agents": {
     "defaults": {
       "model": {
-        "primary": "openrouter/meta-llama/llama-4-maverick"
+        "primary": "deepseek/deepseek-r1-0528:free"
       }
     }
   },
