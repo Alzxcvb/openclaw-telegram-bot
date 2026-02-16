@@ -2,11 +2,13 @@
 MODEL="${OPENCLAW_MODEL:-google/gemma-3n-e2b-it:free}"
 
 mkdir -p "$HOME/.openclaw"
-mkdir -p /tmp/openclaw-state/agents/main/agent
 
-# Write main config
+# Try both config formats - the GitHub README uses "agent.model" (singular)
 cat > "$HOME/.openclaw/openclaw.json" << CONF
 {
+  "agent": {
+    "model": "$MODEL"
+  },
   "agents": {
     "defaults": {
       "model": {
@@ -27,15 +29,5 @@ cat > "$HOME/.openclaw/openclaw.json" << CONF
   }
 }
 CONF
-
-# Write agent profile with model
-cat > /tmp/openclaw-state/agents/main/agent/auth-profiles.json << CONF2
-{
-  "default": {
-    "provider": "openrouter",
-    "model": "$MODEL"
-  }
-}
-CONF2
 
 exec node openclaw.mjs gateway --allow-unconfigured --bind lan
