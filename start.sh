@@ -1,7 +1,9 @@
 #!/bin/bash
 mkdir -p "$HOME/.openclaw"
 
-# Write config first
+# Remove any stale config from persistent volume before writing ours
+rm -f "$HOME/.openclaw/openclaw.json" "$HOME/.openclaw/openclaw.json.bak"
+
 cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
 {
   "agents": {
