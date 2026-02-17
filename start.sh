@@ -4,28 +4,28 @@
 chown -R node:node /home/node/.openclaw 2>/dev/null || true
 
 # Overwrite the persistent config with our desired settings
-cat > /home/node/.openclaw/openclaw.json << 'CONF'
-{
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "openrouter/google/gemini-2.0-flash-001"
-      }
-    }
-  },
-  "channels": {
-    "telegram": {
-      "enabled": true,
-      "dmPolicy": "open",
-      "allowFrom": ["*"],
-      "streamMode": "partial"
-    }
-  },
-  "gateway": {
-    "bind": "lan"
-  }
-}
-CONF
+# Using python to do a proper JSON merge so we preserve any internal metadata
+python3 -c "
+import json, os
+config_path = '/home/node/.openclaw/openclaw.json'
+config = {}
+if os.path.exists(config_path):
+    with open(config_path) as f:
+        config = json.load(f)
+
+# Set our desired values
+config.setdefault('agents', {}).setdefault('defaults', {}).setdefault('model', {})['primary'] = 'openrouter/google/gemini-2.0-flash-001'
+config.setdefault('channels', {}).setdefault('telegram', {}).update({
+    'enabled': True,
+    'dmPolicy': 'open',
+    'allowFrom': ['*'],
+    'streamMode': 'partial'
+})
+config.setdefault('gateway', {})['bind'] = 'lan'
+
+with open(config_path, 'w') as f:
+    json.dump(config, f, indent=2)
+"
 chown node:node /home/node/.openclaw/openclaw.json
 
 # Set dummy Brave API key so OpenClaw enables web_search tool
