@@ -36,14 +36,26 @@ cat /home/node/.openclaw/openclaw.json >&2
 export BRAVE_API_KEY=dummy
 export HOME=/home/node
 
-# Ensure Python deps are installed
-echo "Installing Python deps..." >&2
-export HOME=/root
-python3 -m pip install --break-system-packages --target=/usr/local/lib/python3.11/dist-packages duckduckgo-search fastapi uvicorn pyyaml 2>&1
+# Debug: where does Python look for packages, and where are they actually?
+echo "=== Python diagnostics ===" >&2
+echo "python3 location: $(which python3)" >&2
+echo "python3 version: $(python3 --version)" >&2
+python3 -c "import sys; print('Python search paths:'); [print(f'  {p}') for p in sys.path]" 2>&1
+echo "=== Looking for ddgs on disk ===" >&2
+find / -name "ddgs" -type d 2>/dev/null | head -10 >&2
+find / -name "duckduckgo_search*" -type d 2>/dev/null | head -10 >&2
+echo "=== End diagnostics ===" >&2
+
+# Install Python deps to a known location and tell Python about it
+python3 -m pip install --break-system-packages --root-user-action=ignore duckduckgo-search fastapi uvicorn pyyaml 2>&1
 echo "pip exit: $?" >&2
-export PYTHONPATH=/usr/local/lib/python3.11/dist-packages:${PYTHONPATH:-}
-python3 -c "from ddgs import DDGS; print('ddgs OK')" 2>&1
-export HOME=/home/node
+
+# Show where pip put the packages
+echo "=== After pip install, looking for ddgs ===" >&2
+find / -name "ddgs" -type d 2>/dev/null | head -10 >&2
+
+# Test the import
+python3 -c "from ddgs import DDGS; print('ddgs import SUCCESS')" 2>&1
 
 # Start brave_shim
 python3 /opt/brave_shim/brave_shim.py &
