@@ -7,7 +7,7 @@ cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
   "agents": {
     "defaults": {
       "model": {
-        "primary": "openrouter/meta-llama/llama-4-maverick"
+        "primary": "openrouter/google/gemini-2.0-flash-001"
       }
     }
   },
