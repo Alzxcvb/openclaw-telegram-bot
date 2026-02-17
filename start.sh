@@ -4,7 +4,7 @@
 mkdir -p /home/node/.openclaw
 chown node:node /home/node/.openclaw
 
-# Write config — with native DuckDuckGo search enabled
+# Write config — no tools section, let OpenClaw auto-detect from env vars
 cat > /home/node/.openclaw/openclaw.json << 'CONF'
 {
   "agents": {
@@ -20,13 +20,6 @@ cat > /home/node/.openclaw/openclaw.json << 'CONF'
       "dmPolicy": "open",
       "allowFrom": ["*"],
       "streamMode": "partial"
-    }
-  },
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "duckduckgo"
-      }
     }
   },
   "gateway": {
