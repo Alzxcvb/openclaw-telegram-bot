@@ -2,7 +2,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "deepseek/deepseek-r1-0528:free"
+        "primary": "openrouter/meta-llama/llama-4-maverick"
       }
     }
   },
@@ -12,13 +12,6 @@
       "dmPolicy": "open",
       "allowFrom": ["*"],
       "streamMode": "partial"
-    }
-  },
-  "tools": {
-    "web": {
-      "search": {
-        "provider": "duckduckgo"
-      }
     }
   },
   "gateway": {
