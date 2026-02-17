@@ -30,12 +30,13 @@ chown node:node /home/node/.openclaw/openclaw.json
 
 # Set dummy Brave API key so OpenClaw enables web_search tool
 export BRAVE_API_KEY=dummy
+export HOME=/home/node
 
-# Start brave_shim (DuckDuckGo proxy) in the background
-su -s /bin/bash node -c "python3 /opt/brave_shim/brave_shim.py &"
+# Start brave_shim (DuckDuckGo proxy) in the background as node user
+su -s /bin/bash node -c "python3 /opt/brave_shim/brave_shim.py" &
 
 # Brief wait for shim startup
 sleep 3
 
-# Drop to node user and start gateway
-exec su -s /bin/bash node -c "cd /app && exec node openclaw.mjs gateway --allow-unconfigured --bind lan"
+# Drop to node user and start gateway, preserving env vars
+exec su -s /bin/bash --preserve-environment node -c "cd /app && exec node openclaw.mjs gateway --allow-unconfigured --bind lan"
