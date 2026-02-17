@@ -36,12 +36,14 @@ cat /home/node/.openclaw/openclaw.json >&2
 export BRAVE_API_KEY=dummy
 export HOME=/home/node
 
-# Ensure Python deps are installed (build-time install doesn't persist across Railway deploys)
+# Ensure Python deps are installed
 echo "Installing Python deps..." >&2
-python3 -m pip install --break-system-packages duckduckgo-search fastapi uvicorn pyyaml 2>&1
-echo "pip exit code: $?" >&2
-echo "Testing ddgs import..." >&2
+export HOME=/root
+python3 -m pip install --break-system-packages --target=/usr/local/lib/python3.11/dist-packages duckduckgo-search fastapi uvicorn pyyaml 2>&1
+echo "pip exit: $?" >&2
+export PYTHONPATH=/usr/local/lib/python3.11/dist-packages:${PYTHONPATH:-}
 python3 -c "from ddgs import DDGS; print('ddgs OK')" 2>&1
+export HOME=/home/node
 
 # Start brave_shim
 python3 /opt/brave_shim/brave_shim.py &
