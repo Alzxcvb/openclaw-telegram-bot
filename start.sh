@@ -22,6 +22,18 @@ cat > /home/node/.openclaw/openclaw.json << 'CONF'
       "streamMode": "partial"
     }
   },
+  "tools": {
+    "web": {
+      "search": {
+        "enabled": true,
+        "provider": "perplexity",
+        "perplexity": {
+          "baseUrl": "https://openrouter.ai/api/v1",
+          "model": "perplexity/sonar-pro"
+        }
+      }
+    }
+  },
   "gateway": {
     "bind": "lan"
   }
