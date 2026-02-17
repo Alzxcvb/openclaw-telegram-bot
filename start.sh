@@ -18,6 +18,13 @@ cat > "$HOME/.openclaw/openclaw.json" << 'CONF'
       "streamMode": "partial"
     }
   },
+  "tools": {
+    "web": {
+      "search": {
+        "provider": "duckduckgo"
+      }
+    }
+  },
   "gateway": {
     "bind": "lan"
   }
