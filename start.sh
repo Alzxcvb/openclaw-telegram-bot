@@ -36,6 +36,9 @@ cat /home/node/.openclaw/openclaw.json >&2
 export BRAVE_API_KEY=dummy
 export HOME=/home/node
 
+# Ensure Python deps are installed (build-time install doesn't persist across Railway deploys)
+pip install --break-system-packages -q duckduckgo-search fastapi uvicorn pyyaml 2>&1
+
 # Start brave_shim — run as root since pip packages installed as root
 python3 /opt/brave_shim/brave_shim.py &
 SHIM_PID=$!
