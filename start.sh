@@ -17,8 +17,8 @@ cat > /home/node/.openclaw/openclaw.json << 'CONF'
   "channels": {
     "telegram": {
       "enabled": true,
-      "dmPolicy": "open",
-      "allowFrom": ["*"],
+      "dmPolicy": "allowlist",
+      "allowFrom": ["8413726590"],
       "streamMode": "partial"
     }
   },
