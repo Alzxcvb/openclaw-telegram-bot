@@ -41,6 +41,11 @@ cat > /home/node/.openclaw/openclaw.json << 'CONF'
 CONF
 chown node:node /home/node/.openclaw/openclaw.json
 
+# Install netweaver skill
+mkdir -p /home/node/.openclaw/skills/netweaver
+cp /app/skills/netweaver/SKILL.md /home/node/.openclaw/skills/netweaver/SKILL.md
+chown -R node:node /home/node/.openclaw/skills
+
 export HOME=/home/node
 
 # Start gateway as node user
