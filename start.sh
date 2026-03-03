@@ -10,7 +10,7 @@ cat > /home/node/.openclaw/openclaw.json << 'CONF'
   "agents": {
     "defaults": {
       "model": {
-        "primary": "openrouter/google/gemini-2.0-flash-001"
+        "primary": "openrouter/google/gemini-2.5-flash-preview"
       }
     }
   },
