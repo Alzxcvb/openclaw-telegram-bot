@@ -1,15 +1,13 @@
 {
-  "_comment": "Edit this file to add your recurring reminders. Commit and push to update.",
+  "_comment": "Edit this file to add recurring reminders. Commit and push to update.",
 
   "monthly": [
-    {"name": "Example: Chase Sapphire payment due", "day": 15},
-    {"name": "Example: Amex payment due", "day": 28}
+    {"name": "Capital One Venture payment due", "day": 5},
+    {"name": "Chase Sapphire Reserve payment due", "day": 16},
+    {"name": "Crypto.com card: Spotify + Amazon charges", "day": 18}
   ],
 
-  "annual": [
-    {"name": "Example: Car insurance renewal", "month": 6, "day": 1},
-    {"name": "Example: Domain renewals", "month": 1, "day": 1}
-  ],
+  "annual": [],
 
   "weekly": []
 }
