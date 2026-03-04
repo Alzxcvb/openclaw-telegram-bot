@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
 Morning brief for Alex — runs daily at 8AM MYT (UTC+8) via Railway cron.
-Sends a Telegram message summarizing:
-  - Birthdays today
-  - Date-triggered contacts (Veterans Day, holidays, etc.)
-  - Overdue follow-ups
-  - Scheduled reminders (credit cards, annual dates, etc.)
+Sends two Telegram messages:
+  1. Personal brief: birthdays, contacts, follow-ups, reminders
+  2. News brief: AI advancements + geopolitics/conflicts
 """
 
 import os
@@ -17,18 +15,25 @@ import pytz
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "8413726590")
 NETWEAVER_API_URL = os.environ.get("NETWEAVER_API_URL", "")
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 
 
-def send_telegram(text):
+# --- Telegram ---
+
+def send_telegram(text, parse_mode="Markdown"):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    resp = requests.post(url, json={
+    payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": text,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": True,
-    }, timeout=10)
+        "disable_web_page_preview": False,
+    }
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    resp = requests.post(url, json=payload, timeout=10)
     resp.raise_for_status()
 
+
+# --- NetWeaver ---
 
 def netweaver_query(params):
     if not NETWEAVER_API_URL:
@@ -47,8 +52,7 @@ def format_contacts(contacts):
     for c in contacts:
         name = c.get("name", "Unknown")
         parts = [f"*{name}*"]
-        loc_parts = [c.get("city"), c.get("country")]
-        loc = ", ".join(p for p in loc_parts if p)
+        loc = ", ".join(p for p in [c.get("city"), c.get("country")] if p)
         if loc:
             parts.append(f"({loc})")
         links = c.get("socialLinks", [])
@@ -59,6 +63,8 @@ def format_contacts(contacts):
     return "\n".join(lines)
 
 
+# --- Reminders ---
+
 def load_reminders():
     path = os.path.join(os.path.dirname(__file__), "reminders.json")
     with open(path) as f:
@@ -67,22 +73,60 @@ def load_reminders():
 
 def get_todays_reminders(reminders, today):
     due = []
-
     for r in reminders.get("monthly", []):
         if today.day == r["day"]:
             due.append(r["name"])
-
     for r in reminders.get("annual", []):
         if today.month == r["month"] and today.day == r["day"]:
             due.append(r["name"])
-
     for r in reminders.get("weekly", []):
-        # weekday: 0=Monday … 6=Sunday
         if today.weekday() == r["weekday"]:
             due.append(r["name"])
-
     return due
 
+
+# --- News via Perplexity Sonar Pro (OpenRouter) ---
+
+def fetch_news(topic_prompt):
+    if not OPENROUTER_API_KEY:
+        return None
+    try:
+        resp = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "perplexity/sonar-pro",
+                "messages": [{"role": "user", "content": topic_prompt}],
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print(f"News fetch failed: {e}")
+        return None
+
+
+AI_NEWS_PROMPT = (
+    "Give me the top 4 AI and technology advancement news stories from the last 24 hours. "
+    "For each story provide: a short headline, a 1-2 sentence summary, and the source URL. "
+    "Focus on major model releases, research breakthroughs, and industry developments. "
+    "Be concise. Format as a numbered list."
+)
+
+GEO_NEWS_PROMPT = (
+    "Give me the top 4 geopolitical and conflict news stories from the last 24 hours. "
+    "Cover active wars, international tensions, and major political developments "
+    "(e.g. US-Venezuela, US-Iran, Ukraine, Middle East, China-Taiwan, etc.). "
+    "For each story: short headline, 1-2 sentence summary, and source URL. "
+    "Be concise. Format as a numbered list."
+)
+
+
+# --- Main ---
 
 def main():
     tz = pytz.timezone("Asia/Kuala_Lumpur")
@@ -90,19 +134,17 @@ def main():
     today_str = today.strftime("%A, %B %d %Y")
     today_mmdd = today.strftime("%m-%d")
 
+    # ── Message 1: Personal brief ──────────────────────────────────────────
     sections = [f"☀️ *Good morning, Alex\\!* Here's your brief for {today_str}.\n"]
 
-    # Birthdays
     birthdays = netweaver_query({"birthday": "today"})
     if birthdays:
         sections.append("🎂 *Birthdays Today*\n" + format_contacts(birthdays))
 
-    # Date-triggered contacts (Veterans Day Nov 11, etc.)
     date_contacts = netweaver_query({"date": today_mmdd})
     if date_contacts:
         sections.append("📅 *Reach Out Today*\n" + format_contacts(date_contacts))
 
-    # Overdue follow-ups
     overdue = netweaver_query({"overdue": "true"})
     if overdue:
         shown = overdue[:5]
@@ -112,7 +154,6 @@ def main():
             + format_contacts(shown) + extra
         )
 
-    # Scheduled reminders
     try:
         reminders = load_reminders()
         due = get_todays_reminders(reminders, today)
@@ -125,9 +166,36 @@ def main():
     if len(sections) == 1:
         sections.append("✅ Nothing on the agenda today\\. Enjoy your day\\!")
 
-    message = "\n\n".join(sections)
-    print(message)
-    send_telegram(message)
+    personal_msg = "\n\n".join(sections)
+    print(personal_msg)
+    send_telegram(personal_msg)
+
+    # ── Message 2: News brief ──────────────────────────────────────────────
+    if not OPENROUTER_API_KEY:
+        print("No OPENROUTER_API_KEY set — skipping news brief.")
+        return
+
+    print("Fetching news...")
+    ai_news = fetch_news(AI_NEWS_PROMPT)
+    geo_news = fetch_news(GEO_NEWS_PROMPT)
+
+    news_parts = ["🗞 *Daily News Brief*\n"]
+
+    if ai_news:
+        news_parts.append(f"🤖 *AI & Tech*\n{ai_news}")
+    else:
+        news_parts.append("🤖 *AI & Tech*\n_(Could not fetch news today)_")
+
+    if geo_news:
+        news_parts.append(f"🌍 *Geopolitics & Conflicts*\n{geo_news}")
+    else:
+        news_parts.append("🌍 *Geopolitics & Conflicts*\n_(Could not fetch news today)_")
+
+    news_msg = "\n\n".join(news_parts)
+    print(news_msg)
+    # Send as plain text — Perplexity responses contain URLs/symbols that break Markdown
+    send_telegram(news_msg, parse_mode=None)
+
     print("Morning brief sent successfully.")
 
 
