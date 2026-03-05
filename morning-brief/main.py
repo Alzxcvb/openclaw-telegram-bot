@@ -16,6 +16,8 @@ TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "8413726590")
 NETWEAVER_API_URL = os.environ.get("NETWEAVER_API_URL", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+RAILWAY_API_TOKEN = os.environ.get("RAILWAY_API_TOKEN", "")
+RAILWAY_PROJECT_ID = os.environ.get("RAILWAY_PROJECT_ID", "7d840ee1-767c-4d1c-8a4d-27237fe311b3")
 
 
 # --- Telegram ---
@@ -110,6 +112,68 @@ def fetch_news(topic_prompt):
         return None
 
 
+# --- Usage / Cost ---
+
+def fetch_openrouter_usage():
+    """Returns (used_usd, limit_usd, remaining_usd) or None on failure."""
+    if not OPENROUTER_API_KEY:
+        return None
+    try:
+        resp = requests.get(
+            "https://openrouter.ai/api/v1/auth/key",
+            headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json().get("data", {})
+        used = data.get("usage")         # USD used this billing period
+        limit = data.get("limit")        # USD credit limit
+        remaining = data.get("limit_remaining")
+        if used is not None:
+            return (used, limit, remaining)
+    except Exception as e:
+        print(f"OpenRouter usage fetch failed: {e}")
+    return None
+
+
+def fetch_railway_usage():
+    """Returns estimated current-period spend in USD, or None on failure."""
+    if not RAILWAY_API_TOKEN:
+        return None
+    try:
+        resp = requests.post(
+            "https://backboard.railway.app/graphql/v2",
+            headers={
+                "Authorization": f"Bearer {RAILWAY_API_TOKEN}",
+                "Content-Type": "application/json",
+            },
+            json={"query": f"""
+            {{
+              project(id: "{RAILWAY_PROJECT_ID}") {{
+                usages {{
+                  edges {{
+                    node {{
+                      entityType
+                      entityId
+                      estimatedUsage
+                    }}
+                  }}
+                }}
+              }}
+            }}
+            """},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        edges = data.get("data", {}).get("project", {}).get("usages", {}).get("edges", [])
+        total = sum(e["node"].get("estimatedUsage", 0) for e in edges)
+        return total if edges else None
+    except Exception as e:
+        print(f"Railway usage fetch failed: {e}")
+    return None
+
+
 AI_NEWS_PROMPT = (
     "Give me the top 4 AI and technology advancement news stories from the last 24 hours. "
     "For each story provide: a short headline, a 1-2 sentence summary, and the source URL. "
@@ -162,6 +226,24 @@ def main():
             sections.append(f"🔔 *Reminders*\n{items}")
     except Exception as e:
         print(f"Warning: reminders.json error: {e}")
+
+    # Usage & cost
+    usage_lines = []
+
+    or_usage = fetch_openrouter_usage()
+    if or_usage:
+        used, limit, remaining = or_usage
+        used_str = f"${used:.4f}" if used is not None else "?"
+        limit_str = f"${limit:.2f}" if limit is not None else "?"
+        remaining_str = f"${remaining:.4f}" if remaining is not None else "?"
+        usage_lines.append(f"• OpenRouter: {used_str} used / {limit_str} limit ({remaining_str} remaining)")
+
+    rw_usage = fetch_railway_usage()
+    if rw_usage is not None:
+        usage_lines.append(f"• Railway: ~${rw_usage:.4f} estimated this period")
+
+    if usage_lines:
+        sections.append("💰 *Usage This Billing Period*\n" + "\n".join(usage_lines))
 
     if len(sections) == 1:
         sections.append("✅ Nothing on the agenda today\\. Enjoy your day\\!")
