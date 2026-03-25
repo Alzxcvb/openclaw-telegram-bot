@@ -5,7 +5,7 @@ mkdir -p /home/node/.openclaw
 chown node:node /home/node/.openclaw
 
 # Write config — no tools section, let OpenClaw auto-detect from env vars
-cat > /home/node/.openclaw/openclaw.json << 'CONF'
+cat > /home/node/.openclaw/openclaw.json << CONF
 {
   "agents": {
     "defaults": {
@@ -18,7 +18,7 @@ cat > /home/node/.openclaw/openclaw.json << 'CONF'
     "telegram": {
       "enabled": true,
       "dmPolicy": "allowlist",
-      "allowFrom": ["8413726590"],
+      "allowFrom": ["${TELEGRAM_CHAT_ID}"],
       "streamMode": "partial"
     }
   },

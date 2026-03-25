@@ -15,11 +15,11 @@ import pytz
 import feedparser
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "8413726590")
+TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 NETWEAVER_API_URL = os.environ.get("NETWEAVER_API_URL", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 RAILWAY_API_TOKEN = os.environ.get("RAILWAY_API_TOKEN", "")
-RAILWAY_PROJECT_ID = os.environ.get("RAILWAY_PROJECT_ID", "7d840ee1-767c-4d1c-8a4d-27237fe311b3")
+RAILWAY_PROJECT_ID = os.environ.get("RAILWAY_PROJECT_ID", "")
 
 # --- Bismarck Brief ---
 BISMARCK_BRIEF_RSS_URL = "https://brief.bismarckanalysis.com/feed"
