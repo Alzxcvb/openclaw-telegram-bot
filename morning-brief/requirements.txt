@@ -1,2 +1,6 @@
 requests
 pytz
+flask
+schedule
+gspread
+oauth2client
