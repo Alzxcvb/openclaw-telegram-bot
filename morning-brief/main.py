@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
 Morning brief for Alex — runs daily at 8AM MYT (UTC+8) via Railway cron.
-Sends three Telegram messages:
-  1. Personal brief: birthdays, contacts, follow-ups, reminders
-  2. News brief: AI advancements + geopolitics/conflicts
-  3. Strategic briefing: Latest Bismarck Brief articles (weekly)
+Sends a personal brief via Telegram: birthdays, contacts, follow-ups, reminders, usage.
 """
 
 import os
@@ -12,7 +9,6 @@ import json
 import requests
 from datetime import datetime
 import pytz
-import feedparser
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
@@ -20,11 +16,6 @@ NETWEAVER_API_URL = os.environ.get("NETWEAVER_API_URL", "")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 RAILWAY_API_TOKEN = os.environ.get("RAILWAY_API_TOKEN", "")
 RAILWAY_PROJECT_ID = os.environ.get("RAILWAY_PROJECT_ID", "")
-
-# --- Bismarck Brief ---
-BISMARCK_BRIEF_RSS_URL = "https://brief.bismarckanalysis.com/feed"
-BISMARCK_BRIEF_STATE_FILE = os.path.join(os.path.dirname(__file__), "bismarck_brief_state.json")
-BISMARCK_BRIEF_MAX_ARTICLES = 2
 
 
 # --- Telegram ---
@@ -94,31 +85,6 @@ def get_todays_reminders(reminders, today):
     return due
 
 
-# --- News via Perplexity Sonar Pro (OpenRouter) ---
-
-def fetch_news(topic_prompt):
-    if not OPENROUTER_API_KEY:
-        return None
-    try:
-        resp = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "perplexity/sonar-pro",
-                "messages": [{"role": "user", "content": topic_prompt}],
-            },
-            timeout=30,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        print(f"News fetch failed: {e}")
-        return None
-
-
 # --- Usage / Cost ---
 
 def fetch_openrouter_usage():
@@ -179,148 +145,6 @@ def fetch_railway_usage():
     except Exception as e:
         print(f"Railway usage fetch failed: {e}")
     return None
-
-
-AI_NEWS_PROMPT = (
-    "Give me the top 4 AI and technology advancement news stories from the last 24 hours. "
-    "For each story provide: a short headline, a 1-2 sentence summary, and the source URL. "
-    "Focus on major model releases, research breakthroughs, and industry developments. "
-    "Be concise. Format as a numbered list."
-)
-
-GEO_NEWS_PROMPT = (
-    "Give me the top 4 geopolitical and conflict news stories from the last 24 hours. "
-    "Cover active wars, international tensions, and major political developments "
-    "(e.g. US-Venezuela, US-Iran, Ukraine, Middle East, China-Taiwan, etc.). "
-    "For each story: short headline, 1-2 sentence summary, and source URL. "
-    "Be concise. Format as a numbered list."
-)
-
-
-# --- Bismarck Brief ---
-
-def load_bismarck_state():
-    """Load the state file tracking which articles we've already seen."""
-    if os.path.exists(BISMARCK_BRIEF_STATE_FILE):
-        try:
-            with open(BISMARCK_BRIEF_STATE_FILE) as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Warning: Could not load Bismarck state: {e}")
-    return {"last_article_date": None, "articles_seen": []}
-
-
-def save_bismarck_state(state):
-    """Save the state file."""
-    try:
-        with open(BISMARCK_BRIEF_STATE_FILE, "w") as f:
-            json.dump(state, f, indent=2)
-    except Exception as e:
-        print(f"Warning: Could not save Bismarck state: {e}")
-
-
-def fetch_bismarck_articles():
-    """Fetch the latest articles from Bismarck Brief RSS feed."""
-    try:
-        feed = feedparser.parse(BISMARCK_BRIEF_RSS_URL)
-        if feed.bozo:
-            print(f"Warning: RSS feed parse error: {feed.bozo_exception}")
-
-        articles = []
-        for entry in feed.entries[:10]:  # Get top 10 recent entries
-            article = {
-                "title": entry.get("title", ""),
-                "summary": entry.get("summary", ""),
-                "link": entry.get("link", ""),
-                "published": entry.get("published", ""),
-                "id": entry.get("id", entry.get("link", "")),
-            }
-            if article["title"]:  # Only include if title exists
-                articles.append(article)
-
-        return articles
-    except Exception as e:
-        print(f"Bismarck fetch failed: {e}")
-        return []
-
-
-def summarize_article(title, summary_html):
-    """Use OpenRouter to create a concise 2-sentence summary of the article."""
-    if not OPENROUTER_API_KEY or not title:
-        return None
-
-    try:
-        # Strip HTML tags from summary for context
-        summary_text = summary_html.replace("<p>", " ").replace("</p>", " ")
-        summary_text = summary_text.replace("<br>", " ").replace("<br/>", " ")
-        # Simple HTML tag removal
-        import re
-        summary_text = re.sub(r"<[^>]+>", "", summary_text).strip()[:300]
-
-        prompt = (
-            f"Read this article title and summary, then write a concise 2-sentence summary:\n\n"
-            f"Title: {title}\n"
-            f"Summary: {summary_text}\n\n"
-            f"Your 2-sentence summary:"
-        )
-
-        resp = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "perplexity/sonar-pro",
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            timeout=15,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        print(f"Summarization failed for '{title}': {e}")
-        return None
-
-
-def format_bismarck_articles(articles, state):
-    """Format new Bismarck articles for Telegram."""
-    if not articles:
-        return None
-
-    # Filter to articles we haven't seen before
-    new_articles = [a for a in articles if a["id"] not in state.get("articles_seen", [])]
-    new_articles = new_articles[:BISMARCK_BRIEF_MAX_ARTICLES]  # Limit to max per day
-
-    if not new_articles:
-        return None  # No new articles
-
-    lines = ["📋 *Bismarck Brief — Latest Articles*\n"]
-
-    for article in new_articles:
-        title = article["title"]
-        link = article["link"]
-
-        # Try to get a summary
-        summary = summarize_article(title, article.get("summary", ""))
-        if summary:
-            lines.append(f"• *{title}*")
-            lines.append(f"  {summary}")
-        else:
-            lines.append(f"• *{title}*")
-
-        lines.append(f"  [Read on Substack]({link})\n")
-
-    # Update state to mark these articles as seen
-    for article in new_articles:
-        state["articles_seen"].append(article["id"])
-        state["last_article_date"] = article.get("published")
-
-    # Keep only last 50 article IDs to avoid state file growing indefinitely
-    if len(state["articles_seen"]) > 50:
-        state["articles_seen"] = state["articles_seen"][-50:]
-
-    return "\n".join(lines), state
 
 
 # --- Main ---
@@ -384,48 +208,6 @@ def main():
     personal_msg = "\n\n".join(sections)
     print(personal_msg)
     send_telegram(personal_msg)
-
-    # ── Message 2: News brief ──────────────────────────────────────────────
-    if not OPENROUTER_API_KEY:
-        print("No OPENROUTER_API_KEY set — skipping news brief.")
-        return
-
-    print("Fetching news...")
-    ai_news = fetch_news(AI_NEWS_PROMPT)
-    geo_news = fetch_news(GEO_NEWS_PROMPT)
-
-    news_parts = ["🗞 *Daily News Brief*\n"]
-
-    if ai_news:
-        news_parts.append(f"🤖 *AI & Tech*\n{ai_news}")
-    else:
-        news_parts.append("🤖 *AI & Tech*\n_(Could not fetch news today)_")
-
-    if geo_news:
-        news_parts.append(f"🌍 *Geopolitics & Conflicts*\n{geo_news}")
-    else:
-        news_parts.append("🌍 *Geopolitics & Conflicts*\n_(Could not fetch news today)_")
-
-    news_msg = "\n\n".join(news_parts)
-    print(news_msg)
-    # Send as plain text — Perplexity responses contain URLs/symbols that break Markdown
-    send_telegram(news_msg, parse_mode=None)
-
-    # ── Message 3: Bismarck Brief ──────────────────────────────────────────────
-    print("Fetching Bismarck Brief articles...")
-    bismarck_state = load_bismarck_state()
-    bismarck_articles = fetch_bismarck_articles()
-
-    if bismarck_articles:
-        bismarck_msg, updated_state = format_bismarck_articles(bismarck_articles, bismarck_state)
-        if bismarck_msg:
-            print(bismarck_msg)
-            send_telegram(bismarck_msg, parse_mode="Markdown")
-            save_bismarck_state(updated_state)
-        else:
-            print("No new Bismarck Brief articles today.")
-    else:
-        print("Could not fetch Bismarck Brief feed.")
 
     print("Morning brief sent successfully.")
 
