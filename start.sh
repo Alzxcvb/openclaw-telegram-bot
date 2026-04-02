@@ -35,7 +35,8 @@ cat > /home/node/.openclaw/openclaw.json << CONF
     }
   },
   "gateway": {
-    "bind": "lan"
+    "bind": "lan",
+    "port": 3000
   }
 }
 CONF
