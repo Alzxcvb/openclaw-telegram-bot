@@ -9,8 +9,9 @@ COPY morning-brief/ /app/morning-brief/
 COPY skills/ /app/skills/
 
 # Install pip and Python dependencies at build time
+# --break-system-packages is required on Debian 12 (PEP 668) and safe in Docker
 RUN apt-get update -qq && apt-get install -y -qq python3-pip && \
-    pip3 install --quiet -r /app/morning-brief/requirements.txt
+    pip3 install --break-system-packages --quiet -r /app/morning-brief/requirements.txt
 
 ENTRYPOINT ["/bin/bash", "/tmp/start.sh"]
 CMD []
