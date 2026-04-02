@@ -59,6 +59,9 @@ def ingest_health_data():
     try:
         data = request.get_json()
 
+        # Log raw payload so we can inspect the real format from Health Auto Export
+        print(f"[health-ingest] RAW PAYLOAD: {json.dumps(data, indent=2)}")
+
         # Store nutrition data
         nutrition = data.get("nutrition", {})
         if nutrition:

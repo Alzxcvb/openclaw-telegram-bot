@@ -64,7 +64,7 @@ GATEWAY_PID=$!
 # Give gateway time to start
 sleep 2
 
-# Start health ingest Flask app (runs on port 5000)
+# Health ingest Flask app
 python3 /app/morning-brief/health_ingest.py &
 INGEST_PID=$!
 
@@ -77,4 +77,4 @@ python3 /app/morning-brief/telegram_callbacks.py &
 CALLBACK_PID=$!
 
 # Wait for any process to exit (shouldn't happen in normal operation)
-wait -n $GATEWAY_PID $INGEST_PID $SCHEDULER_PID $CALLBACK_PID
+wait -n $GATEWAY_PID $SCHEDULER_PID $CALLBACK_PID $INGEST_PID
