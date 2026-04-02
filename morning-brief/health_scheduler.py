@@ -12,7 +12,7 @@ from datetime import datetime
 import pytz
 from health_db import (
     init_db, get_today_totals, is_pt_done, is_burn_done,
-    get_week_totals, get_latest_health_metrics
+    get_week_totals,
 )
 from meals import get_todays_meal_recommendation
 
@@ -203,25 +203,12 @@ def send_weekly_report():
     else:
         avg_cal = avg_protein = avg_carbs = avg_fat = 0
 
-    # Get latest health metrics
-    metrics = get_latest_health_metrics(['Resting HR', 'HRV', 'Sleep Duration', 'VO2 Max'])
-
     msg_lines = ["📊 *Weekly Report*\n"]
     msg_lines.append("*Nutrition Compliance (7-day avg)*")
     msg_lines.append(f"• Calories: {int(avg_cal)} / {DAILY_CAL_TARGET} ({(avg_cal/DAILY_CAL_TARGET)*100:.0f}%)")
     msg_lines.append(f"• Protein: {int(avg_protein)} / {DAILY_PROTEIN_TARGET}g ({(avg_protein/DAILY_PROTEIN_TARGET)*100:.0f}%)")
     msg_lines.append(f"• Carbs: {int(avg_carbs)} / {DAILY_CARBS_TARGET}g")
-    msg_lines.append(f"• Fat: {int(avg_fat)} / {DAILY_FAT_TARGET}g\n")
-
-    msg_lines.append("*Health Metrics*")
-    if metrics.get('Resting HR'):
-        msg_lines.append(f"• Resting HR: {int(metrics['Resting HR'])} bpm")
-    if metrics.get('HRV'):
-        msg_lines.append(f"• HRV: {int(metrics['HRV'])} ms")
-    if metrics.get('Sleep Duration'):
-        msg_lines.append(f"• Sleep: {metrics['Sleep Duration']:.1f} hours")
-    if metrics.get('VO2 Max'):
-        msg_lines.append(f"• VO2 Max: {metrics['VO2 Max']:.1f} mL/kg/min")
+    msg_lines.append(f"• Fat: {int(avg_fat)} / {DAILY_FAT_TARGET}g")
 
     msg = "\n".join(msg_lines)
     send_telegram(msg)
@@ -229,24 +216,24 @@ def send_weekly_report():
 
 
 def schedule_jobs():
-    """Set up all scheduled jobs."""
-    # Breakfast: 7:00 AM MYT (23:00 UTC prev day)
-    schedule.every().day.at("07:00").do(send_breakfast_brief)
+    """Set up all scheduled jobs. Container runs UTC; MYT = UTC+8."""
+    # Breakfast: 7:00 AM MYT = 23:00 UTC
+    schedule.every().day.at("23:00").do(send_breakfast_brief)
 
-    # Lunch: 11:30 AM MYT (03:30 UTC)
-    schedule.every().day.at("11:30").do(send_lunch_recommendation)
+    # Lunch: 11:30 AM MYT = 03:30 UTC
+    schedule.every().day.at("03:30").do(send_lunch_recommendation)
 
-    # Dinner: 5:30 PM MYT (09:30 UTC)
-    schedule.every().day.at("17:30").do(send_dinner_recommendation)
+    # Dinner: 5:30 PM MYT = 09:30 UTC
+    schedule.every().day.at("09:30").do(send_dinner_recommendation)
 
-    # Weekly report: Sunday 6:00 PM MYT (10:00 UTC)
-    schedule.every().sunday.at("18:00").do(send_weekly_report)
+    # Weekly report: Sunday 6:00 PM MYT = 10:00 UTC
+    schedule.every().sunday.at("10:00").do(send_weekly_report)
 
-    print("✅ Health tracker scheduled jobs configured:")
-    print("  - Breakfast brief: 7:00 AM MYT")
-    print("  - Lunch recommendation: 11:30 AM MYT")
-    print("  - Dinner recommendation: 5:30 PM MYT")
-    print("  - Weekly report: Sunday 6:00 PM MYT")
+    print("✅ Health tracker scheduled jobs configured (UTC times):")
+    print("  - Breakfast brief: 23:00 UTC (7:00 AM MYT)")
+    print("  - Lunch recommendation: 03:30 UTC (11:30 AM MYT)")
+    print("  - Dinner recommendation: 09:30 UTC (5:30 PM MYT)")
+    print("  - Weekly report: Sunday 10:00 UTC (6:00 PM MYT)")
 
 
 def run_scheduler():
