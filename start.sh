@@ -25,12 +25,7 @@ cat > /home/node/.openclaw/openclaw.json << CONF
   "tools": {
     "web": {
       "search": {
-        "enabled": true,
-        "provider": "perplexity",
-        "perplexity": {
-          "baseUrl": "https://openrouter.ai/api/v1",
-          "model": "perplexity/sonar-pro"
-        }
+        "enabled": false
       }
     }
   },
@@ -73,5 +68,5 @@ SCHEDULER_PID=$!
 python3 /app/morning-brief/telegram_callbacks.py &
 CALLBACK_PID=$!
 
-# Wait for any process to exit (shouldn't happen in normal operation)
-wait -n $GATEWAY_PID $SCHEDULER_PID $CALLBACK_PID $INGEST_PID
+# Keep container alive — Railway needs a foreground process
+wait $INGEST_PID
