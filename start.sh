@@ -54,10 +54,6 @@ chown -R node:node /home/node/.openclaw/skills
 
 export HOME=/home/node
 
-# Install Python dependencies for health tracker
-cd /app/morning-brief
-pip install -q -r requirements.txt
-
 # Start OpenClaw gateway as node user in background
 su -s /bin/bash --preserve-environment node -c "cd /app && PORT=3000 node openclaw.mjs gateway --allow-unconfigured --bind lan" &
 GATEWAY_PID=$!

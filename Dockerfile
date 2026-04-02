@@ -8,5 +8,8 @@ COPY --chmod=755 start.sh /tmp/start.sh
 COPY morning-brief/ /app/morning-brief/
 COPY skills/ /app/skills/
 
+# Install Python dependencies at build time
+RUN python3 -m pip install --quiet -r /app/morning-brief/requirements.txt
+
 ENTRYPOINT ["/bin/bash", "/tmp/start.sh"]
 CMD []
