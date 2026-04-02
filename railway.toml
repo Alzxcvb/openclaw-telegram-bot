@@ -7,6 +7,6 @@ startCommand = "bash /tmp/start.sh"
 restartPolicyType = "on_failure"
 
 [variables]
-PORT = "8080"
+PORT = "3000"
 
 
