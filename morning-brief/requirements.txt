@@ -1,6 +1,7 @@
 requests
 pytz
 flask
+gunicorn
 schedule
 gspread
 oauth2client

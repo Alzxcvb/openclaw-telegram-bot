@@ -56,8 +56,8 @@ GATEWAY_PID=$!
 # Give gateway time to start
 sleep 2
 
-# Health ingest Flask app
-python3 /app/morning-brief/health_ingest.py &
+# Health ingest — gunicorn for production use
+cd /app/morning-brief && gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 30 health_ingest:app &
 INGEST_PID=$!
 
 # Start health scheduler (runs continuously)
