@@ -45,11 +45,7 @@ cat > "${STATE_DIR}/openclaw.json" << CONF
     "web": {
       "search": {
         "enabled": true,
-        "provider": "perplexity",
-        "perplexity": {
-          "baseUrl": "https://openrouter.ai/api/v1",
-          "model": "perplexity/sonar-pro"
-        }
+        "provider": "perplexity"
       }
     }
   },
