@@ -1,10 +1,23 @@
 #!/bin/bash
 
+# Fail fast on missing core credentials instead of starting a half-configured bot.
+if [ -z "${TELEGRAM_BOT_TOKEN}" ]; then
+  echo "[start] TELEGRAM_BOT_TOKEN is required"
+  exit 1
+fi
+
+if [ -z "${OPENROUTER_API_KEY}" ]; then
+  echo "[start] OPENROUTER_API_KEY is required"
+  exit 1
+fi
+
 # Create config directory
 mkdir -p /home/node/.openclaw
 chown node:node /home/node/.openclaw
 
-# Write config — no tools section, let OpenClaw auto-detect from env vars
+# Write a complete OpenClaw config on startup.
+# Keep Telegram DM policy open while debugging so message delivery does not depend
+# on TELEGRAM_CHAT_ID matching the exact chat id format.
 cat > /home/node/.openclaw/openclaw.json << CONF
 {
   "agents": {
@@ -17,15 +30,21 @@ cat > /home/node/.openclaw/openclaw.json << CONF
   "channels": {
     "telegram": {
       "enabled": true,
-      "dmPolicy": "allowlist",
-      "allowFrom": ["${TELEGRAM_CHAT_ID}"],
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "dmPolicy": "open",
+      "allowFrom": ["*"],
       "streamMode": "partial"
     }
   },
   "tools": {
     "web": {
       "search": {
-        "enabled": false
+        "enabled": true,
+        "provider": "perplexity",
+        "perplexity": {
+          "baseUrl": "https://openrouter.ai/api/v1",
+          "model": "perplexity/sonar-pro"
+        }
       }
     }
   },
