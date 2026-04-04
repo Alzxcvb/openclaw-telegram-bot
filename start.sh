@@ -1,29 +1,11 @@
 #!/bin/bash
 
-set -euo pipefail
+# Create config directory
+mkdir -p /home/node/.openclaw
+chown node:node /home/node/.openclaw
 
-STATE_DIR="${OPENCLAW_STATE_DIR:-/home/node/.openclaw}"
-SKILLS_DIR="${STATE_DIR}/skills"
-
-# Fail fast on missing core credentials instead of starting a half-configured bot.
-if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
-  echo "[start] TELEGRAM_BOT_TOKEN is required"
-  exit 1
-fi
-
-if [ -z "${OPENROUTER_API_KEY:-}" ]; then
-  echo "[start] OPENROUTER_API_KEY is required"
-  exit 1
-fi
-
-# Create config directory in the same state path the gateway uses on Railway.
-mkdir -p "${STATE_DIR}"
-chown node:node "${STATE_DIR}"
-
-# Write a complete OpenClaw config on startup.
-# Keep Telegram DM policy open while debugging so message delivery does not depend
-# on TELEGRAM_CHAT_ID matching the exact chat id format.
-cat > "${STATE_DIR}/openclaw.json" << CONF
+# Write config — no tools section, let OpenClaw auto-detect from env vars
+cat > /home/node/.openclaw/openclaw.json << CONF
 {
   "agents": {
     "defaults": {
@@ -35,10 +17,16 @@ cat > "${STATE_DIR}/openclaw.json" << CONF
   "channels": {
     "telegram": {
       "enabled": true,
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "dmPolicy": "open",
-      "allowFrom": ["*"],
+      "dmPolicy": "allowlist",
+      "allowFrom": ["${TELEGRAM_CHAT_ID}"],
       "streamMode": "partial"
+    }
+  },
+  "tools": {
+    "web": {
+      "search": {
+        "enabled": false
+      }
     }
   },
   "gateway": {
@@ -47,22 +35,19 @@ cat > "${STATE_DIR}/openclaw.json" << CONF
   }
 }
 CONF
-chown node:node "${STATE_DIR}/openclaw.json"
+chown node:node /home/node/.openclaw/openclaw.json
 
-# Install every bundled skill into the active OpenClaw state directory.
-mkdir -p "${SKILLS_DIR}"
-for skill_path in /app/skills/*; do
-  if [ -d "${skill_path}" ] && [ -f "${skill_path}/SKILL.md" ]; then
-    skill_name="$(basename "${skill_path}")"
-    mkdir -p "${SKILLS_DIR}/${skill_name}"
-    cp "${skill_path}/SKILL.md" "${SKILLS_DIR}/${skill_name}/SKILL.md"
-  fi
-done
-chown -R node:node "${SKILLS_DIR}"
+# Install netweaver skill
+mkdir -p /home/node/.openclaw/skills/netweaver
+cp /app/skills/netweaver/SKILL.md /home/node/.openclaw/skills/netweaver/SKILL.md
+chown -R node:node /home/node/.openclaw/skills
+
+# Install health skill
+mkdir -p /home/node/.openclaw/skills/health
+cp /app/skills/health/SKILL.md /home/node/.openclaw/skills/health/SKILL.md
+chown -R node:node /home/node/.openclaw/skills
 
 export HOME=/home/node
-echo "[start] using state dir ${STATE_DIR}"
-echo "[start] wrote ${STATE_DIR}/openclaw.json"
 
 # Start OpenClaw gateway as node user in background
 su -s /bin/bash --preserve-environment node -c "cd /app && PORT=4000 node openclaw.mjs gateway --allow-unconfigured --bind lan" &
