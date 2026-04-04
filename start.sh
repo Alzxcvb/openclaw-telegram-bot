@@ -64,9 +64,9 @@ INGEST_PID=$!
 python3 /app/morning-brief/health_scheduler.py &
 SCHEDULER_PID=$!
 
-# Start Telegram callback handler (polls for button presses)
-python3 /app/morning-brief/telegram_callbacks.py &
-CALLBACK_PID=$!
+# NOTE: telegram_callbacks.py removed from here — its getUpdates polling
+# conflicts with OpenClaw's gateway (409 Conflict). Callback handling
+# is now done via webhook on the gunicorn health_ingest server instead.
 
 # Keep container alive — Railway needs a foreground process
 wait $INGEST_PID

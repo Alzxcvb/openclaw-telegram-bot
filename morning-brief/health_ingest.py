@@ -5,11 +5,14 @@ Receives Apple Health data every hour and stores it in health.db.
 
 import os
 import json
+import requests as http_requests
 from flask import Flask, request, jsonify
-from health_db import init_db, store_health_metric, store_daily_log
+from health_db import init_db, store_health_metric, store_daily_log, mark_pt_done, mark_burn_done
 
 app = Flask(__name__)
 HEALTH_API_KEY = os.environ.get("HEALTH_API_KEY", "")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # Initialize database on startup
 init_db()
@@ -165,6 +168,59 @@ def health_status():
         "status": "healthy",
         "service": "health-ingest"
     }), 200
+
+
+@app.route("/telegram/callback", methods=["POST"])
+def telegram_callback_webhook():
+    """
+    Webhook endpoint for Telegram callback queries (PT/Burn button presses).
+    This replaces the old polling-based telegram_callbacks.py which conflicted
+    with OpenClaw's getUpdates polling (409 Conflict).
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "no data"}), 400
+
+    callback = data.get("callback_query")
+    if not callback:
+        return jsonify({"ok": True}), 200
+
+    callback_id = callback["id"]
+    message = callback.get("message", {})
+    message_id = message.get("message_id")
+    chat_id = str(message.get("chat", {}).get("id", ""))
+    callback_data = callback.get("data", "")
+
+    if chat_id != str(TELEGRAM_CHAT_ID):
+        return jsonify({"ok": True}), 200
+
+    bot_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+
+    def answer_cb(text):
+        http_requests.post(f"{bot_url}/answerCallbackQuery",
+                           json={"callback_query_id": callback_id, "text": text}, timeout=5)
+
+    def edit_msg(text):
+        http_requests.post(f"{bot_url}/editMessageText",
+                           json={"chat_id": chat_id, "message_id": message_id,
+                                 "text": text, "parse_mode": "Markdown"}, timeout=5)
+
+    if callback_data == "pt_yes":
+        mark_pt_done()
+        answer_cb("PT marked as done!")
+        edit_msg("✅ *PT marked as done*")
+    elif callback_data == "pt_no":
+        answer_cb("Okay, PT skipped today")
+        edit_msg("❌ *PT skipped*")
+    elif callback_data == "burn_yes":
+        mark_burn_done()
+        answer_cb("Burn marked as done!")
+        edit_msg("✅ *Burn marked as done*")
+    elif callback_data == "burn_no":
+        answer_cb("Okay, Burn skipped today")
+        edit_msg("❌ *Burn skipped*")
+
+    return jsonify({"ok": True}), 200
 
 
 if __name__ == "__main__":
