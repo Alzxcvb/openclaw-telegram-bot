@@ -41,14 +41,6 @@ cat > "${STATE_DIR}/openclaw.json" << CONF
       "streamMode": "partial"
     }
   },
-  "tools": {
-    "web": {
-      "search": {
-        "enabled": true,
-        "provider": "perplexity"
-      }
-    }
-  },
   "gateway": {
     "bind": "lan",
     "port": 4000
@@ -57,14 +49,15 @@ cat > "${STATE_DIR}/openclaw.json" << CONF
 CONF
 chown node:node "${STATE_DIR}/openclaw.json"
 
-# Install netweaver skill
-mkdir -p "${SKILLS_DIR}/netweaver"
-cp /app/skills/netweaver/SKILL.md "${SKILLS_DIR}/netweaver/SKILL.md"
-chown -R node:node "${SKILLS_DIR}"
-
-# Install health skill
-mkdir -p "${SKILLS_DIR}/health"
-cp /app/skills/health/SKILL.md "${SKILLS_DIR}/health/SKILL.md"
+# Install every bundled skill into the active OpenClaw state directory.
+mkdir -p "${SKILLS_DIR}"
+for skill_path in /app/skills/*; do
+  if [ -d "${skill_path}" ] && [ -f "${skill_path}/SKILL.md" ]; then
+    skill_name="$(basename "${skill_path}")"
+    mkdir -p "${SKILLS_DIR}/${skill_name}"
+    cp "${skill_path}/SKILL.md" "${SKILLS_DIR}/${skill_name}/SKILL.md"
+  fi
+done
 chown -R node:node "${SKILLS_DIR}"
 
 export HOME=/home/node
