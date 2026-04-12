@@ -146,15 +146,38 @@ def get_today_totals():
 
 
 def store_daily_log(meal, cal, protein, carbs, fat, fiber):
-    """Store a meal log entry."""
+    """
+    Store a meal log entry. For apple_health_daily, UPSERT to avoid
+    counting the same day's nutrition multiple times (webhook fires hourly).
+    """
     conn = get_db()
     c = conn.cursor()
     today = today_str()
 
-    c.execute("""
-        INSERT INTO daily_logs (date, meal, cal_logged, protein_logged, carbs_logged, fat_logged, fiber_logged)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (today, meal, cal, protein, carbs, fat, fiber))
+    if meal == "apple_health_daily":
+        # Check if we already have an entry for today
+        c.execute(
+            "SELECT id FROM daily_logs WHERE date = ? AND meal = ?",
+            (today, meal),
+        )
+        existing = c.fetchone()
+        if existing:
+            c.execute("""
+                UPDATE daily_logs
+                SET cal_logged = ?, protein_logged = ?, carbs_logged = ?,
+                    fat_logged = ?, fiber_logged = ?
+                WHERE date = ? AND meal = ?
+            """, (cal, protein, carbs, fat, fiber, today, meal))
+        else:
+            c.execute("""
+                INSERT INTO daily_logs (date, meal, cal_logged, protein_logged, carbs_logged, fat_logged, fiber_logged)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (today, meal, cal, protein, carbs, fat, fiber))
+    else:
+        c.execute("""
+            INSERT INTO daily_logs (date, meal, cal_logged, protein_logged, carbs_logged, fat_logged, fiber_logged)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (today, meal, cal, protein, carbs, fat, fiber))
 
     conn.commit()
     conn.close()
@@ -246,10 +269,10 @@ def get_week_totals(days_back=7):
                SUM(fat_logged) as fat,
                SUM(fiber_logged) as fiber
         FROM daily_logs
-        WHERE date >= date('now', 'localtime', '-' || ? || ' days')
+        WHERE date >= date(?, '-' || ? || ' days')
         GROUP BY date
         ORDER BY date DESC
-    """, (days_back - 1,))
+    """, (today_str(), days_back - 1))
 
     rows = c.fetchall()
     conn.close()

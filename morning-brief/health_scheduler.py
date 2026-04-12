@@ -28,6 +28,15 @@ DAILY_FAT_TARGET = 75
 DAILY_FIBER_TARGET = 27
 
 
+def format_recommendation_line(item):
+    """Render lunch and dinner recommendations with the right serving unit."""
+    serving_unit = item.get("serving_unit", "scoop")
+    servings = item.get("scoops", 1)
+    if serving_unit == "plate":
+        return f"*{item['name']}*\n_{item['cal']} cal | {item['protein']}g protein_\n"
+    return f"*{item['name']}* x {servings} scoops\n_{item['cal']} cal | {item['protein']}g protein_\n"
+
+
 def send_telegram(text, parse_mode="Markdown", reply_markup=None):
     """Send a message to Telegram."""
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -99,13 +108,12 @@ def send_lunch_recommendation():
 
     if rec['recommendation']:
         top = rec['recommendation'][0]
-        msg_lines.append(
-            f"*{top['name']}* × {top['scoops']} scoops\n"
-            f"_{top['cal']} cal | {top['protein']}g protein_\n"
-        )
+        msg_lines.append(format_recommendation_line(top))
 
         # Show macros
         msg_lines.append(f"Breakdown: {top['carbs']}g carbs, {top['fat']}g fat, {top['fiber']}g fiber\n")
+    else:
+        msg_lines.append("_No lunch options parsed from today's sheet._\n")
 
     # Remaining targets
     remaining_cal = DAILY_CAL_TARGET - (totals['cal'] + totals['manual_adjustment_cal'])
@@ -143,7 +151,7 @@ def send_lunch_recommendation():
 
 def send_dinner_recommendation():
     """
-    5:30 PM — Dinner recommendation considering breakfast + lunch.
+    5:15 PM — Dinner recommendation considering breakfast + lunch.
     """
     totals = get_today_totals()
     rec = get_todays_meal_recommendation("dinner")
@@ -153,11 +161,10 @@ def send_dinner_recommendation():
 
     if rec['recommendation']:
         top = rec['recommendation'][0]
-        msg_lines.append(
-            f"*{top['name']}* × {top['scoops']} scoops\n"
-            f"_{top['cal']} cal | {top['protein']}g protein_\n"
-        )
+        msg_lines.append(format_recommendation_line(top))
         msg_lines.append(f"Breakdown: {top['carbs']}g carbs, {top['fat']}g fat, {top['fiber']}g fiber\n")
+    else:
+        msg_lines.append("_No dinner options parsed from today's sheet._\n")
 
     # Daily progress
     remaining_cal = DAILY_CAL_TARGET - (totals['cal'] + totals['manual_adjustment_cal'])
@@ -185,7 +192,7 @@ def send_dinner_recommendation():
     msg += "\n\n📊 Tap below to adjust logged nutrition if needed"
 
     send_telegram(msg)
-    print("[5:30 PM] Dinner recommendation sent")
+    print("[5:15 PM] Dinner recommendation sent")
 
 
 def send_weekly_report():
@@ -223,8 +230,8 @@ def schedule_jobs():
     # Lunch: 11:30 AM MYT = 03:30 UTC
     schedule.every().day.at("03:30").do(send_lunch_recommendation)
 
-    # Dinner: 5:30 PM MYT = 09:30 UTC
-    schedule.every().day.at("09:30").do(send_dinner_recommendation)
+    # Dinner: 5:15 PM MYT = 09:15 UTC
+    schedule.every().day.at("09:15").do(send_dinner_recommendation)
 
     # Weekly report: Sunday 6:00 PM MYT = 10:00 UTC
     schedule.every().sunday.at("10:00").do(send_weekly_report)
@@ -232,7 +239,7 @@ def schedule_jobs():
     print("✅ Health tracker scheduled jobs configured (UTC times):")
     print("  - Breakfast brief: 23:00 UTC (7:00 AM MYT)")
     print("  - Lunch recommendation: 03:30 UTC (11:30 AM MYT)")
-    print("  - Dinner recommendation: 09:30 UTC (5:30 PM MYT)")
+    print("  - Dinner recommendation: 09:15 UTC (5:15 PM MYT)")
     print("  - Weekly report: Sunday 10:00 UTC (6:00 PM MYT)")
 
 

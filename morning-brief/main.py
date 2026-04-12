@@ -18,6 +18,68 @@ RAILWAY_API_TOKEN = os.environ.get("RAILWAY_API_TOKEN", "")
 RAILWAY_PROJECT_ID = os.environ.get("RAILWAY_PROJECT_ID", "")
 
 
+# --- Weather ---
+
+def fetch_weather():
+    """Fetch today's weather for Forest City, Johor via wttr.in."""
+    try:
+        resp = requests.get(
+            "https://wttr.in/Forest+City,Johor?format=%C+%t+|+Humidity:+%h+|+Wind:+%w+|+UV:+%u",
+            headers={"User-Agent": "curl/7.68.0"},
+            timeout=10,
+        )
+        if resp.ok:
+            return resp.text.strip()
+    except Exception as e:
+        print(f"Weather fetch failed: {e}")
+    return None
+
+
+# --- Tom's News ---
+
+TOM_NEWS_ACCOUNTS = [
+    "balaboris", "mtaibbi", "elikiziloglu", "MichaelTracey",
+    "ggreenwald", "aaaborovik", "RnaudBertworthy",
+]
+
+def fetch_toms_news():
+    """Use Perplexity Sonar Pro via OpenRouter to summarize recent takes from Tom's curated voices."""
+    if not OPENROUTER_API_KEY:
+        return None
+    accounts_str = ", ".join(f"@{a}" for a in TOM_NEWS_ACCOUNTS)
+    try:
+        resp = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "perplexity/sonar-pro",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Summarize the most notable recent posts and takes (last 24-48 hours) "
+                            f"from these Twitter/X accounts: {accounts_str}. "
+                            f"Focus on geopolitics, foreign policy, and media criticism. "
+                            f"Give 3-5 bullet points, each attributed to the account. "
+                            f"If an account has no recent notable activity, skip it. Be concise."
+                        ),
+                    }
+                ],
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        return content.strip() if content else None
+    except Exception as e:
+        print(f"Tom's news fetch failed: {e}")
+    return None
+
+
 # --- Telegram ---
 
 def send_telegram(text, parse_mode="Markdown"):
@@ -156,7 +218,12 @@ def main():
     today_mmdd = today.strftime("%m-%d")
 
     # ── Message 1: Personal brief ──────────────────────────────────────────
-    sections = [f"☀️ *Good morning, Alex\\!* Here's your brief for {today_str}.\n"]
+    sections = [f"☀️ *Good morning, Alex!* Here's your brief for {today_str}.\n"]
+
+    # Weather
+    weather = fetch_weather()
+    if weather:
+        sections.append(f"🌤 *Weather — Forest City*\n{weather}")
 
     birthdays = netweaver_query({"birthday": "today"})
     if birthdays:
@@ -183,6 +250,11 @@ def main():
             sections.append(f"🔔 *Reminders*\n{items}")
     except Exception as e:
         print(f"Warning: reminders.json error: {e}")
+
+    # Tom's news
+    toms_news = fetch_toms_news()
+    if toms_news:
+        sections.append(f"📰 *Tom's News Roundup*\n{toms_news}")
 
     # Usage & cost
     usage_lines = []

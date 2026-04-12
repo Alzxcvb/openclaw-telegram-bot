@@ -64,10 +64,14 @@ def ingest_health_data():
 
         # Log raw payload so we can inspect the real format from Health Auto Export
         print(f"[health-ingest] RAW PAYLOAD: {json.dumps(data, indent=2)}")
+        print(f"[health-ingest] Top-level keys: {list(data.keys()) if isinstance(data, dict) else type(data)}")
 
         # Store nutrition data
         nutrition = data.get("nutrition", {})
         if nutrition:
+            print(f"[health-ingest] Nutrition data found: cal={nutrition.get('calories')}, protein={nutrition.get('protein')}")
+        else:
+            print(f"[health-ingest] WARNING: No 'nutrition' key in payload. Available keys: {list(data.keys()) if isinstance(data, dict) else 'NOT A DICT'}")
             # Store as a single daily entry
             store_daily_log(
                 meal="apple_health_daily",
