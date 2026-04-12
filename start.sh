@@ -49,17 +49,20 @@ chown -R node:node /home/node/.openclaw/skills
 
 export HOME=/home/node
 
-# Start OpenClaw gateway as node user in background
-# Unset PORT so gateway uses config's port=4000, not Railway's dynamic PORT.
-# --preserve-environment carries Railway's PORT through even with inline PORT=4000 assignment.
-env -u PORT su -s /bin/bash --preserve-environment node -c "cd /app && node openclaw.mjs gateway --allow-unconfigured --bind lan" &
+# Save Railway's dynamic PORT for gunicorn before we override it for the gateway
+GUNICORN_PORT=${PORT:-8080}
+
+# Start OpenClaw gateway as node user in background.
+# Subshell with explicit PORT=4000 override before su --preserve-environment,
+# so the gateway uses 4000 instead of Railway's PORT (which gunicorn needs).
+(export PORT=4000; su -s /bin/bash --preserve-environment node -c "cd /app && node openclaw.mjs gateway --allow-unconfigured --bind lan") &
 GATEWAY_PID=$!
 
 # Give gateway time to start
 sleep 2
 
 # Health ingest — gunicorn for production use
-cd /app/morning-brief && gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 30 health_ingest:app &
+cd /app/morning-brief && gunicorn --bind 0.0.0.0:${GUNICORN_PORT} --workers 1 --timeout 30 health_ingest:app &
 INGEST_PID=$!
 
 # Start health scheduler (runs continuously)
