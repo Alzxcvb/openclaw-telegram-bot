@@ -50,7 +50,9 @@ chown -R node:node /home/node/.openclaw/skills
 export HOME=/home/node
 
 # Start OpenClaw gateway as node user in background
-su -s /bin/bash --preserve-environment node -c "cd /app && PORT=4000 node openclaw.mjs gateway --allow-unconfigured --bind lan" &
+# Unset PORT so gateway uses config's port=4000, not Railway's dynamic PORT.
+# --preserve-environment carries Railway's PORT through even with inline PORT=4000 assignment.
+env -u PORT su -s /bin/bash --preserve-environment node -c "cd /app && node openclaw.mjs gateway --allow-unconfigured --bind lan" &
 GATEWAY_PID=$!
 
 # Give gateway time to start
